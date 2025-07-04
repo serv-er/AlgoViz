@@ -1,6 +1,6 @@
-# 🔗 Nexstem DAG Builder
+# 🔗 AlgoViz
 
-An advanced **DAG (Directed Acyclic Graph) Editor** built using ReactFlow, React 19, and TailwindCSS. Designed for **intuitive graph editing**, it supports:
+An interactive Algorithm Visualizer for **DAGs** and **Trees**, built with ReactFlow, React 19, and TailwindCSS.
 
 - ✅ Directed edge constraints
 - 🔁 Undo/Redo
@@ -13,23 +13,8 @@ An advanced **DAG (Directed Acyclic Graph) Editor** built using ReactFlow, React
 
 ---
 
-## 🛠️ Setup Instructions
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/serv-er/DAG-builder.git
-
-cd pipeline-editor
-
-# 2. Install dependencies
-npm install
-
-# 3. Start the development server
-npm run dev
 
 
----
-```
 ## 🧰 Tech Stack
 
 | Library                 | Purpose                   |
@@ -72,69 +57,28 @@ npm run dev
 
 
 
----
-
-## 🧠 Challenges Faced
-
-### 1. Ghost / Invalid Node Injection
-
-**Problem:**  
-During node additions or hot reloads, sometimes ReactFlow or extensions injected an invalid node like:
-
-```
-{ "id": "node_0", "type": "dimensions", "position": { "x": NaN, "y": NaN } }
-```
-
-This caused crashes in layouting and rendered NaN positions.
-
-**Root Cause:**
-- Likely injected by React DevTools or unexpected browser extensions
-- Occurred during development reload or accidental state corruption
-
-**Solution Implemented:**
-
-We created a strict `isValidNode` function:
-
-```
-const isValidNode = (node) =>
-node?.id &&
-typeof node.id === 'string' &&
-node.type !== 'dimensions' &&
-node.position?.x !== undefined &&
-node.position?.y !== undefined;
-```
-
-And inside `useLayoutEffect`, we filtered invalid ones:
-
-```
-useLayoutEffect(() => {
-const filtered = nodes.filter(isValidNode);
-if (filtered.length !== nodes.length) {
-const removed = nodes.filter((n) => !isValidNode(n));
-removed.forEach((b) => console.warn('🧹 Removed ghost node:', b));
-setNodes(filtered);
-}
-}, [nodes]);
-```
 
 
-**Result:**  
-This completely blocked rendering of any unexpected devtool-injected or malformed node.
-
----
-
-## 📚 References
-
-- React Flow Docs
-- DAGRE Layout Algorithm
-- DFS Cycle Detection
-- Tailwind CSS
-- React 19 Beta Docs
-
----
+#
 
 ## 👨‍💻 Author
 
 Made with ❤️ by Sarvesh Baranwal
 
 Feel free to contribute or fork the project if you want to extend the DAG builder further!
+
+---
+
+## 🤝 Contributor Guide
+
+We welcome all contributors — beginners and experts alike! Here's how to get started:
+
+### 🔧 Local Setup
+
+```bash
+git clone https://github.com/serv-er/AlgoViz.git
+cd AlgoViz
+npm install
+npm run dev
+
+---
