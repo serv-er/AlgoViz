@@ -14,17 +14,19 @@ import ReactFlow, {
   MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-
+import Toast from '../components/Toast';
+import { AnimatePresence } from 'framer-motion'; 
 import NodeLabelEditor from '../components/NodeLabelEditor';
 import CustomNode from '../components/CustomNode';
 import Buttons from '../components/Buttons';
 import ContextMenu from '../components/ContextMenu';
 import EdgeLabelEditor from '../components/EdgeLabelEditor';
 import TrackerOverlay from '../components/TrackerOverlay';
-
+import { getTreeLayout } from '../utils/getTreeLayout';
 import useUndoRedo from '../hook/useUndoRedo';
 import { getLayoutedNodes } from '../utils/dagreLayout';
 import usePipelineValidation from '../hook/usePipelineValidation';
+import useGraphValidation from '../hook/usePipelineValidation';
 import useKeyboardShortcuts from '../hook/useKeyboardShortcuts';
 
 // Register custom node type for React Flow
@@ -42,11 +44,13 @@ function PipelineEditor() {
   // React Flow node and edge state management
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
+  
   // Undo/Redo custom hook
   const undoRedo = useUndoRedo(nodes, edges, setNodes, setEdges);
+  const [validationMode, setValidationMode] = useState('dag');
 
   // UI state for label editing, selection, validation, etc.
+  const [toastMessage, setToastMessage] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [nodeLabel, setNodeLabel] = useState('');
   const [invalidEdgeIds, setInvalidEdgeIds] = useState([]);
@@ -55,6 +59,7 @@ function PipelineEditor() {
   const [draggingNode, setDraggingNode] = useState(null);
   const [isValid, setIsValid] = useState(false);
   const [contextMenu, setContextMenu] = useState(null);
+const [validationReason, setValidationReason] = useState('');
 
   // Ref for focusing input fields
   const inputRef = useRef(null);
@@ -73,7 +78,8 @@ function PipelineEditor() {
   }, [nodes, setNodes]);
 
   // DAG validation (cycles, edge rules, etc.)
-  usePipelineValidation(nodes, edges, setIsValid, setInvalidEdgeIds);
+useGraphValidation(nodes, edges, validationMode, setIsValid, setInvalidEdgeIds, setValidationReason);
+
 
   // Keyboard shortcuts (e.g., delete, undo/redo)
   useKeyboardShortcuts(setNodes, setEdges);
@@ -162,10 +168,18 @@ function PipelineEditor() {
   /**
    * Auto-layout nodes using DAGRE.
    */
-  const handleAutoLayout = () => {
-    const layouted = getLayoutedNodes(nodes, edges);
-    setNodes(layouted);
-  };
+const handleAutoLayout = () => {
+  let layouted;
+
+  if (validationMode === 'tree') {
+    layouted = getTreeLayout(nodes, edges); // You'll define this in utils
+  } else {
+    layouted = getLayoutedNodes(nodes, edges); // DAG-style layout
+  }
+
+  setNodes(layouted);
+};
+
 
   /**
    * Edge label editing: open editor on edge click.
@@ -214,6 +228,30 @@ function PipelineEditor() {
     onEdgesChange(changes);
     undoRedo.updateHistory(nodes, edges);
   };
+
+
+  // Validator Info
+
+  const validatorInfo = {
+  dag: {
+    title: 'DAG Validator',
+    rules: [
+      '✅ No cycles',
+      '✅ All nodes must be connected',
+      '✅ Directional edges only',
+    ],
+  },
+  tree: {
+    title: 'Tree Validator',
+    rules: [
+      '✅ Exactly one root (no incoming edge)',
+      '✅ Each node has at most one parent',
+      '✅ No cycles allowed',
+      '✅ Must be connected',
+    ],
+  },
+};
+
 
   /**
    * Save edited node label.
@@ -279,13 +317,24 @@ function PipelineEditor() {
   // --- Render ---
   return (
     <div className="w-screen h-screen p-4 relative bg-gray-50">
-      <h1 className="text-center text-2xl font-bold my-4">Nexstem DAG Builder</h1>
+      <h1 className="text-center text-2xl font-bold my-4">AlgoViz(Graphs)</h1>
 
       {/* Top action buttons */}
       <Buttons addNode={addNode} handleAutoLayout={handleAutoLayout} />
 
       {/* Undo/Redo controls */}
+      
       <div className="flex justify-center gap-4 my-4">
+        <select
+    value={validationMode}
+    onChange={(e) => setValidationMode(e.target.value)}
+    className="border px-4 py-2 rounded shadow text-sm bg-white"
+  >
+    <option value="dag">DAG Validator</option>
+    <option value="tree">Tree Validator</option>
+    <option value="bipartite">Bipartite Checker</option>
+  </select>
+
         <button
           onClick={undoRedo.undo}
           className="px-4 py-2 bg-blue-100 text-blue-800 rounded shadow hover:bg-blue-200"
@@ -301,15 +350,25 @@ function PipelineEditor() {
       </div>
 
       {/* DAG validity banner */}
-      <div
-        className={`absolute top-6 right-6 z-10 px-4 py-2 rounded font-semibold border shadow ${
-          isValid
-            ? 'bg-green-100 text-green-800 border-green-400'
-            : 'bg-red-100 text-red-800 border-red-400'
-        }`}
-      >
-        DAG is {isValid ? 'VALID ✅' : 'INVALID ❌'}
-      </div>
+<div
+  className={`absolute top-6 right-6 z-10 px-4 py-2 rounded font-semibold border shadow max-w-xs ${
+    isValid ? 'bg-green-100 text-green-800 border-green-400' : 'bg-red-100 text-red-800 border-red-400'
+  }`}
+  title={validationReason}
+>
+  {validationReason}
+</div>
+
+<div className="absolute top-1/2 right-2 transform -translate-y-1/2 w-[260px] bg-white border shadow rounded p-3 text-sm">
+  <h2 className="font-bold text-md mb-2">{validatorInfo[validationMode].title}</h2>
+  <ul className="list-disc list-inside text-gray-700 space-y-1">
+    {validatorInfo[validationMode].rules.map((rule, idx) => (
+      <li key={idx}>{rule}</li>
+    ))}
+  </ul>
+</div>
+
+
 
       {/* JSON Preview Panel */}
       <div className="absolute bottom-4 right-4 z-10 bg-white border shadow rounded p-2 text-xs w-[400px] h-[150px] overflow-auto">
@@ -376,6 +435,15 @@ function PipelineEditor() {
           <Background />
         </ReactFlow>
       </div>
+      {/* <AnimatePresence>
+  {toastMessage && (
+    <Toast
+      message={toastMessage}
+      type={toastMessage.startsWith('✅') ? 'success' : 'error'}
+      onClose={() => setToastMessage('')}
+    />
+  )}
+</AnimatePresence> */}
     </div>
   );
 }

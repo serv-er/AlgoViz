@@ -60,11 +60,6 @@ npm run dev
 ---
 
 ## 📸 Demo
-
-Replace the links below with actual screen recordings or screenshots when ready.
-
-- **Live Preview:** https://your-demo-link.com
-
 **Sample Screenshots:**
 - JSON Preview Panel
 ![Valid DAG with JSON PREVIEW](public/validDagwithjsonpreview.png)
